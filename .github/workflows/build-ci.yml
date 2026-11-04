@@ -5,6 +5,11 @@ on:
       - main
     paths:
       - app/**
+  pull_request:
+    branches:
+      - main
+    paths:
+      - app/**
 
 jobs:
   build-frontend:
