@@ -2,12 +2,12 @@
 - hosts: servers
   become: true
   vars:
-    ansible_ssh_private_key_file: "./.ssh/{{inventory_hostname}}_private_key"
+    ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
   roles:
     - { role: control-plane }
 - hosts: agents
   become: true
   vars:
-    ansible_ssh_private_key_file: "./.ssh/{{inventory_hostname}}_private_key"
+    ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
   roles:
     - { role: worker-nodes }
