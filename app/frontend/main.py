@@ -77,8 +77,8 @@ def index():
         return render_template_string(PAGE, city=city, result=result)
     if error:
         return render_template_string(PAGE, city=city, result=error)
-    else:
-        return render_template_string(PAGE, city=city, result=None)
+    # Else, if it's a GET request or no result/error, render the page with no result.
+    return render_template_string(PAGE, city=city, result=None)
 
 
 @app.route("/health", methods=["GET"])
