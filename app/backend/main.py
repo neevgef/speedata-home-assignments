@@ -10,7 +10,10 @@ import uvicorn
 BACKEND_HOST = os.getenv("BACKEND_HOST", '0.0.0.0')
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 logger = logging.getLogger(__name__)
+
 
 
 # Initialize FastAPI Application
@@ -20,7 +23,7 @@ app = FastAPI()
 @app.get("/weather", name="Get Weather")
 async def get_weather(city: str):
     # Step 1: Convert the city name to latitude and longitude
-    geocoding_url = "https://geocoding-api.open-meteo.com/v1/search"
+    
     geo_params = {
         "name": city,
         "count": 1,
@@ -29,7 +32,7 @@ async def get_weather(city: str):
     }
     
     try:
-        geo_response = requests.get(geocoding_url, params=geo_params, timeout=100)
+        geo_response = requests.get(GEOCODING_URL, params=geo_params, timeout=100)
         geo_response.raise_for_status()
         geo_data = geo_response.json()
     except requests.RequestException as error:
@@ -47,7 +50,6 @@ async def get_weather(city: str):
     full_name = f"{location['name']}, {location.get('country', '')}"
 
     # Step 2: Fetch the current temperature using the coordinates
-    forecast_url = "https://api.open-meteo.com/v1/forecast"
     weather_params = {
         "latitude": lat,
         "longitude": lon,
@@ -56,7 +58,7 @@ async def get_weather(city: str):
     }
 
     try:
-        weather_response = requests.get(forecast_url, params=weather_params, timeout=100)
+        weather_response = requests.get(FORECAST_URL, params=weather_params, timeout=100)
         weather_response.raise_for_status()
         weather_data = weather_response.json()
     except requests.RequestException as error:

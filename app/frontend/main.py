@@ -75,7 +75,7 @@ def index():
 
     if result:
         return render_template_string(PAGE, city=city, result=result)
-    elif error:
+    if error:
         return render_template_string(PAGE, city=city, result=error)
     else:
         return render_template_string(PAGE, city=city, result=None)
