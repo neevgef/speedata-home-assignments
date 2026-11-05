@@ -2,11 +2,12 @@
 from fastapi import FastAPI
 import requests
 import uvicorn
+import os
 
 # Environment Variables
-BACKEND_HOST = '0.0.0.0'
-BACKEND_PORT = 8000
-LOG_LEVEL = "info"
+BACKEND_HOST = os.getenv("BACKEND_HOST", '0.0.0.0')
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", 8000))
+LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 
 app = FastAPI()
@@ -27,7 +28,7 @@ async def get_weather(city: str):
     geo_data = geo_response.json()
     
     if not geo_data.get("results"):
-        return f"Error: City '{city}' not found."
+        return {"error": f"City {city} not found."}
     
     # Extract coordinates and structural details
     location = geo_data["results"][0]

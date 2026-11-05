@@ -1,0 +1,29 @@
+[MAIN]
+# Search for configuration and plugins in the current project.
+jobs=0
+ignore=.git
+
+[MESSAGES CONTROL]
+# Keep all checks enabled by default.
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[BASIC]
+# Common short names used for counters and exceptions.
+good-names=i,j,k,ex,_,id
+
+[DESIGN]
+max-args=7
+max-attributes=10
+max-branches=12
+max-locals=15
+max-returns=6
+max-statements=50
+
+[SIMILARITIES]
+min-similarity-lines=4
+
+[REPORTS]
+score=yes

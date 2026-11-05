@@ -1,0 +1,25 @@
+name: Build and Deploy Frontend
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - app/frontend
+  pull_request:
+    branches:
+      - main
+    paths:
+      - app/frontend
+  workflow_dispatch:
+
+jobs:
+  lint-frontend:
+    uses: ./.github/workflows/lint-app.yml
+    with:
+      context: app/frontend
+  build-frontend:
+    uses: ./.github/workflows/build-app.yml
+    with:
+      image_name: skywatch-frontend
+      context: app/frontend
+  

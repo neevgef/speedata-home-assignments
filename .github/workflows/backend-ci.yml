@@ -1,0 +1,25 @@
+name: Build and Deploy Backend
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - app/backend
+  pull_request:
+    branches:
+      - main
+    paths:
+      - app/backend
+  workflow_dispatch:
+
+jobs:
+  lint-backend:
+    uses: ./.github/workflows/lint-app.yml
+    with:
+      context: app/backend
+  build-backend:
+    uses: ./.github/workflows/build-app.yml
+    with:
+      image_name: skywatch-backend
+      context: app/backend
+  

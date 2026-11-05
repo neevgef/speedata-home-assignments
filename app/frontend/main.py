@@ -8,6 +8,7 @@ PORT = int(os.environ.get("PORT", "5000"))
 
 app = Flask(__name__)
 
+# HTML template for the main page rendered by the Flask app.
 PAGE = """
 <!doctype html>
 <html lang="en">
@@ -32,13 +33,21 @@ PAGE = """
 </html>
 """
 
-
 def get_weather(city_name):
+    """
+    Fetch weather data for the given city name from the backend service.
+
+    Args:
+        city_name (str): The name of the city to fetch weather for.
+
+    Returns:
+        tuple: (result, error) where result is the weather data (dict or None) and error is an error message (str or None).
+    """
     try:
-        response = requests.get(BACKEND_URL, params={"city": city_name})
+        response = requests.get(BACKEND_URL, params={"city": city_name}, timeout=100)
         response.raise_for_status()
         data = response.json()
-        return data if isinstance(data, str) else str(data), None
+        return data
     except requests.RequestException as error:
         return None, f"Error fetching weather data: {error}"
 

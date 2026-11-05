@@ -1,0 +1,23 @@
+name: Lint Application
+on:
+  workflow_call:
+    inputs:
+      context:
+        required: true
+        type: string
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.14"
+
+      - name: Use pylint to lint the code
+        run: |
+          pip install pylint
+          pylint ${{ inputs.context }} 
