@@ -28,7 +28,7 @@ jobs:
       packages: write
       contents: write
     outputs:
-      tags: ${{ steps.meta.outputs.tags }}
+      tags: ${{ steps.meta.outputs.tag-names }}
     steps:
       # Check out the repository
       # https://github.com/actions/checkout
