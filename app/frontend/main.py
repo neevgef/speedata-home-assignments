@@ -71,6 +71,17 @@ def index():
     return render_template_string(PAGE, city=city, result=result, error=error)
 
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Health check endpoint to verify that the Flask application is running.
+
+    Returns:
+        dict: A JSON response indicating the health status of the application.
+    """
+    return {"status": "healthy"}
+
+
 if __name__ == "__main__":
     app.run(
         host=HOST,

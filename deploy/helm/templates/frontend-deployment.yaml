@@ -26,10 +26,12 @@ spec:
             - configMapRef:
                 name: {{ include "skywatch.fullname" . }}-frontend
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health
               port: http
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /health
               port: http
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}

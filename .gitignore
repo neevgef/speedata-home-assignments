@@ -2,3 +2,4 @@
 *_pycache__/
 *.vagrant/
 .vscode/
+git-tokens.json
