@@ -6,7 +6,7 @@ frontend:
     pullPolicy: IfNotPresent
   containerPort: 5000
   service:
-    type: NodePort
+    type: LoadBalancer
     port: 5000
     nodePort: 30080
   backendUrl: ""
@@ -25,7 +25,7 @@ backend:
     pullPolicy: IfNotPresent
   containerPort: 8000
   service:
-    port: 8080
+    port: 8000
   logLevel: info
   resources:
     requests:

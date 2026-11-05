@@ -14,6 +14,15 @@ the server first, then join both agents using the server's node token. Re-runnin
 the playbook with the same version and configuration does not reinstall K3s;
 configuration changes notify the corresponding service to restart.
 
+The playbook configures UFW to allow the required K3s node traffic:
+
+- UDP `8472` between all nodes for Flannel VXLAN pod networking.
+- TCP `10250` between all nodes for kubelet API and metrics access.
+- TCP `6443` from agents to server nodes for the Kubernetes API.
+
+These rules are restricted to the other nodes' inventory IPs. The playbook
+does not enable UFW or expose these ports to other hosts.
+
 ## Requirements
 
 - Vagrant and VirtualBox

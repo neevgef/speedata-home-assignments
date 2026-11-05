@@ -6,6 +6,9 @@ metadata:
     {{- include "skywatch.labels" (dict "root" . "app" "frontend") | nindent 4 }}
 spec:
   type: {{ .Values.frontend.service.type }}
+  allocateLoadBalancerNodePorts: true
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
   ports:
     - name: http
       port: {{ .Values.frontend.service.port }}

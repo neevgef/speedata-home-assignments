@@ -5,9 +5,27 @@
     ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
   roles:
     - { role: control-plane }
+
 - hosts: agents
   become: true
   vars:
     ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
   roles:
     - { role: worker-nodes }
+
+- hosts: k3s_cluster
+  become: true
+  vars:
+    ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
+  tasks:
+    - name: Allow Flannel VXLAN traffic between cluster nodes
+      community.general.ufw:
+        rule: allow
+        from_ip: "{{ hostvars[hostname].ansible_host }}"
+        to_ip: any
+        port: 8472
+        proto: udp
+      loop: "{{ groups['k3s_cluster'] | difference([inventory_hostname]) }}"
+      loop_control:
+        loop_var: hostname
+      changed_when: "'Rule added' in flannel_ufw_rule.stdout"
