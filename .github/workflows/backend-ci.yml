@@ -21,9 +21,10 @@ jobs:
     needs: lint-backend
     permissions:
       packages: write
-      contents: read
+      contents: write
     uses: ./.github/workflows/build-app.yml
     with:
+      app_name: backend
       image_name: skywatch-backend
       context: app/backend
   

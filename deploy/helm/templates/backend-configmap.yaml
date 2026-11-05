@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skywatch.fullname" . }}-backend
+  labels:
+    {{- include "skywatch.labels" (dict "root" . "app" "backend") | nindent 4 }}
+data:
+  BACKEND_HOST: "0.0.0.0"
+  BACKEND_PORT: {{ .Values.backend.containerPort | quote }}
+  LOG_LEVEL: {{ .Values.backend.logLevel | quote }}

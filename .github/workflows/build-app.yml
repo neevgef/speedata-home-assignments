@@ -2,6 +2,9 @@ name: Build & Deploy Application
 on:
   workflow_call:
     inputs:
+      app_name:
+        required: true
+        type: string
       image_name:
         required: true
         type: string
@@ -23,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       packages: write
-      contents: read
+      contents: write
     outputs:
       tags: ${{ steps.meta.outputs.tags }}
     steps:
@@ -31,6 +34,8 @@ jobs:
       # https://github.com/actions/checkout
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
 
       # Login against a registry
       # https://github.com/docker/login-action
@@ -61,32 +66,32 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           context: ${{ env.CONTEXT }}
   
-  # update-tag:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #   needs: build
-  #   steps:
-  #     # Check out the repository
-  #     # https://github.com/actions/checkout
-  #     - name: Checkout
-  #       uses: actions/checkout@v6
-  #       with:  
-  #         ref: ${{ github.head_ref }}
+  update-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: build
+    steps:
+      # Check out the repository
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:  
+          ref: ${{ github.head_ref }}
 
-  #     # Update image tag using yq
-  #     - name: Update values.yaml
-  #       run: |
-  #         yq -i '.image = "${{ needs.build.outputs.tags }}"' helm/values.yaml
+      # Update image tag using yq
+      - name: Update values.yaml
+        run: |
+          yq -i '.${{ inputs.app_name }}.image.tag = "${{ needs.build.outputs.tags }}"' helm/values.yaml
 
-  #     # Commit changes
-  #     - name: Commit changes to repo
-  #       run: |
-  #         git config --local user.email "action@github.com"
-  #         git config --local user.name "GitHub Action"
-  #         git commit -m "Update image tag - ${{ needs.build.outputs.tags }}" -a
+      # Commit changes
+      - name: Commit changes to repo
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Update ${{ inputs.app_name }} image tag - ${{ needs.build.outputs.tags }}" -a
       
-  #     # Push changes to the repository
-  #     # https://github.com/ad-m/github-push-action.git
-  #     - name: Push changes
-  #       uses: ad-m/github-push-action@master
+      # Push changes to the repository
+      # https://github.com/ad-m/github-push-action.git
+      - name: Push changes
+        uses: ad-m/github-push-action@master

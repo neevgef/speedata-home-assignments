@@ -21,9 +21,10 @@ jobs:
     needs: lint-frontend
     permissions:
       packages: write
-      contents: read
+      contents: write
     uses: ./.github/workflows/build-app.yml
     with:
+      app_name: frontend
       image_name: skywatch-frontend
       context: app/frontend
   
