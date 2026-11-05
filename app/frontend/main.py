@@ -50,9 +50,9 @@ def get_weather(city_name):
         response = requests.get(BACKEND_URL, params={"city": city_name}, timeout=100)
         response.raise_for_status()
         data = response.json()
-        return data
+        return data, None
     except requests.RequestException as error:
-        return f"Error fetching weather data: {error}"
+        return None, f"Error fetching weather data: {error}"
 
 
 @app.route("/", methods=["GET", "POST"])
