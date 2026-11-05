@@ -18,6 +18,9 @@ jobs:
     with:
       context: app/frontend
   build-frontend:
+    permissions:
+      packages: write
+      contents: read
     uses: ./.github/workflows/build-app.yml
     with:
       image_name: skywatch-frontend

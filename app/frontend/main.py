@@ -6,6 +6,8 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000/weather")
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "5000"))
 
+
+# Initialize the Flask application.
 app = Flask(__name__)
 
 # HTML template for the main page rendered by the Flask app.

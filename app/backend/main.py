@@ -10,7 +10,7 @@ BACKEND_PORT = int(os.getenv("BACKEND_PORT", 8000))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 
-# FastAPI Application
+# Initialize FastAPI Application
 app = FastAPI()
 
 

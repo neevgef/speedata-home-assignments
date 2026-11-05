@@ -18,6 +18,9 @@ jobs:
     with:
       context: app/backend
   build-backend:
+    permissions:
+      packages: write
+      contents: read
     uses: ./.github/workflows/build-app.yml
     with:
       image_name: skywatch-backend
