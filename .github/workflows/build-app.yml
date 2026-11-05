@@ -82,7 +82,7 @@ jobs:
       # Update image tag using yq
       - name: Update values.yaml
         run: |
-          yq -i '.${{ inputs.app_name }}.image.tag = "${{ needs.build.outputs.tags }}"' helm/values.yaml
+          yq -i '.${{ inputs.app_name }}.image.tag = "${{ needs.build.outputs.tags }}"' deploy/helm/values.yaml
 
       # Commit changes
       - name: Commit changes to repo
