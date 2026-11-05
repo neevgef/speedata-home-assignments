@@ -1,0 +1,42 @@
+---
+- name: Check installed K3s version
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: k3s_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Create K3s configuration directory
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Configure K3s agent
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Restart K3s agent
+
+- name: Create K3s installer directory
+  ansible.builtin.file:
+    path: /usr/local/src
+    state: directory
+    mode: "0755"
+
+- name: Download K3s installer
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /usr/local/src/k3s-install.sh
+    mode: "0755"
+  when: k3s_version not in (k3s_installed_version.stdout | default(""))
+
+- name: Install K3s agent
+  ansible.builtin.command: sh /usr/local/src/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: agent
+  when: k3s_version not in (k3s_installed_version.stdout | default(""))

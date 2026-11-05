@@ -1,37 +1,66 @@
-# Imports
-from nicegui import ui
+import os
 import requests
+from flask import Flask, render_template_string, request
 
-# Environment Variables
-BACKEND_HOST = 'localhost'
-BACKEND_PORT = 8000
-BACKEND_URL = f'http://{BACKEND_HOST}:{BACKEND_PORT}/weather'
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000/weather")
+HOST = os.environ.get("HOST", "0.0.0.0")
+PORT = int(os.environ.get("PORT", "5000"))
+
+app = Flask(__name__)
+
+PAGE = """
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SkyWatch</title>
+  </head>
+  <body>
+    <main>
+      <h1>SkyWatch</h1>
+      <form method="post">
+        <label for="city">Enter a city to get the current weather:</label>
+        <input id="city" name="city" type="text" value="{{ city }}"
+               placeholder="Enter city name" required>
+        <button type="submit">Submit</button>
+      </form>
+      {% if result %}<p role="status">{{ result }}</p>{% endif %}
+      {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+    </main>
+  </body>
+</html>
+"""
 
 
-def get_weather(city_input):
-
-    city_name = city_input.value
-    if not city_name:
-        ui.notify('Please enter a city name', type="negative", close_button=True)
-        return
-
+def get_weather(city_name):
     try:
-        response = requests.get(f'{BACKEND_URL}?city={city_name}', timeout=5)
+        response = requests.get(BACKEND_URL, params={"city": city_name})
+        response.raise_for_status()
         data = response.json()
-        return data
-    except requests.RequestException as e:
-        ui.notify(f"Error fetching weather data: {e}", type="negative", close_button=True)
+        return data if isinstance(data, str) else str(data), None
+    except requests.RequestException as error:
+        return None, f"Error fetching weather data: {error}"
 
 
-def main():
-    # We create a class to center all the ui elements on the page
-    ui.label('Enter a city to get the current weather:').classes('justify-center text-lg font-bold')
-    city_input = ui.input('City', placeholder='Enter city name')
-    ui.button('Submit', on_click=lambda: answer_label.set_text(get_weather(city_input)))
-    answer_label = ui.label('')
+@app.route("/", methods=["GET", "POST"])
+def index():
+    city = ""
+    result = None
+    error = None
 
-    ui.run(title='SkyWatch', dark=False)
+    if request.method == "POST":
+        city = request.form.get("city", "").strip()
+        if not city:
+            error = "Please enter a city name."
+        else:
+            result, error = get_weather(city)
+
+    return render_template_string(PAGE, city=city, result=result, error=error)
 
 
-if __name__ in {"__main__", "__mp_main__"}:
-    main()
+if __name__ == "__main__":
+    app.run(
+        host=HOST,
+        port=PORT,
+    )

@@ -1,0 +1,48 @@
+# Vagrant environment: 1 Kubernetes control-plane VM + 2 worker VMs.
+# Requirements: Vagrant and VirtualBox installed.
+# Start with: vagrant up
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_check_update = false
+
+  # Shared defaults for all nodes.
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  nodes = [
+    {
+      name: "server1",
+      hostname: "server1",
+      ip: "192.168.56.10",
+      memory: 2048,
+      cpus: 2
+    },
+    {
+      name: "agent1",
+      hostname: "agent1",
+      ip: "192.168.56.11",
+      memory: 2560,
+      cpus: 2
+    },
+    {
+      name: "agent2",
+      hostname: "agent2",
+      ip: "192.168.56.12",
+      memory: 2560,
+      cpus: 2
+    }
+  ]
+
+  nodes.each do |node|
+    config.vm.define node[:name] do |vm|
+      vm.vm.hostname = node[:hostname]
+      vm.vm.network "private_network", ip: node[:ip]
+
+      vm.vm.provider "virtualbox" do |vb|
+        vb.name = "#{node[:name]}"
+        vb.memory = node[:memory]
+        vb.cpus = node[:cpus]
+      end
+    end
+  end
+end

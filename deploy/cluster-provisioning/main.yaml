@@ -1,0 +1,9 @@
+---
+- hosts: servers
+  become: true
+  roles:
+    - { role: control-plane, ansible_ssh_private_key_file: "./.ssh/{inventory_hostname}_private_key" }
+- hosts: agents
+  become: true
+  roles:
+    - { role: worker-nodes, ansible_ssh_private_key_file: "./.ssh/{inventory_hostname}_private_key" }

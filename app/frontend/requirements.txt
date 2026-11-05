@@ -1,2 +1,2 @@
-nicegui >= 3.19.0
+flask >= 3.0
 requests >= 2.34.0
