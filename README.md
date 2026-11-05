@@ -1,101 +1,261 @@
-# Speedata - Skywatch Assignment
+# SkyWatch
 
-This repository contains the implementation for the Skywatch home assignment.
+SkyWatch is a small weather lookup application deployed to a local Kubernetes
+cluster. This repository contains the application, its container builds, a
+Helm chart, K3s provisioning automation, and GitHub Actions/Argo CD
+configuration.
 
-## Overview
+The original assignment is documented in [skywatch-assignment.md](skywatch-assignment.md).
+I chose **Path A**: three Ubuntu VMs provisioned with Vagrant and Ansible,
+running K3s.
 
-This repository contains:
+## Architecture
 
-- A backend and frontend for a application that gives you the weather in a city of your choice.
-- A Ansible + Vagrant script for deploying a K3S cluster.
-- A Helm chart to deploy our web application
-- A CI Pipeline for linting and building our application, then updating the helm chart to the new version. 
-- This ReadMe that will explain how to deploy the application from start to end.
+**K8s Architecture**
+```text
+Browser
+  |
+  | HTTP
+  v
+Frontend Service (LoadBalancer, nodePort 30080, port 5000)
+  |
+  v
+Flask frontend (1 replica)
+  |
+  | HTTP, in-cluster
+  v
+Backend Service (ClusterIP, port 8000)
+  |
+  v
+FastAPI backend (2 replicas) ---> Open-Meteo geocoding and forecast APIs
+```
 
-## Assignment Context
+**CI\CD Architecture**
+```text
+GitHub Actions ---> GHCR images + image tags in deploy/helm/values.yaml
+                                      |
+                                      v
+                                  Argo CD ---> Helm chart ---> K3s
+```
 
-The assignment is located in [skywatch-assignment.md](skywatch-assignment.md).
+- **Application:** The Flask frontend accepts a city and calls the FastAPI
+  backend. The backend resolves the city and current temperature through
+  Open-Meteo; no API key is required.
+- **Cluster:** Vagrant creates one control-plane VM and two worker VMs.
+  Ansible installs the pinned K3s version and configures the nodes. See
+  [cluster provisioning](deploy/cluster-provisioning/README.md) for node
+  addresses and provisioning details.
+- **Packaging:** One Helm chart manages both services. The frontend is exposed
+  using a `LoadBalancer` Service; the backend uses an internal `ClusterIP`.
+  ConfigMaps provide runtime configuration, and the deployments define health
+  probes and CPU/memory requests and limits.
+- **Delivery:** The GitHub Actions workflows lint and build the frontend and
+  backend images, publish commit-SHA-tagged images to GHCR, and are intended to
+  update the image tags in the chart. Argo CD watches `main` and has automated
+  sync, pruning, and self-healing enabled in
+  [argo-application.yaml](deploy/argo-application.yaml).
 
-## Deployment
+## Design decisions
 
-### 1. Provision the Kubernetes cluster
+- **Vagrant and VirtualBox** - I was faced to choose between Multipass and Vagrant.
+  While Multipass can route through VirtualBox on Windows Home, it is natively built
+  to favor Hyper-V. Vagrant has spent over a decade perfecting its integration with 
+  Oracle VM VirtualBox. Moreover, in the K3s Ansible documentation, they recommend
+  using Vagrant.
+- **FastAPI for Backend** - FastAPI is a modern and popular Python web framework
+  that has gained significant traction in the web development community. It is known 
+  for its exceptional performance and comes with an automatic user-friendly API 
+  documentation.
+- **Deployments instead of StatefulSets** - Both services are stateless and
+  need neither stable pod identities nor persistent per-pod storage. A
+  Deployment provides the rollout and replica management these workloads
+  require without StatefulSet complexity.
+- **Ansible for cluster provisioning** - Keeping K3s installation and node
+  configuration in Ansible separates VM creation from software provisioning.
+  It makes setup repeatable and easier to rerun or maintain than embedding
+  those steps in Vagrant.
 
-Start with the [cluster-provisioning README](deploy/cluster-provisioning/README.md)
-and follow its instructions to create the K3s cluster and configure `kubectl`.
-From the repository root, confirm that the cluster is reachable:
+
+## A How-To Guide - Bring up from scratch
+
+### Prerequisites
+
+- Git and a GitHub account with access to this repository and its GHCR packages.
+- Docker, VirtualBox, and Vagrant on the Windows host.
+- WSL (or another Linux control machine) with Ansible 2.14 or newer and SSH
+  access to the Vagrant private network.
+- `kubectl` and Helm on the machine from which you manage the cluster.
+- About 16 GB of RAM, 20 GB of free disk, and 4 or more CPU cores.
+
+The VM allocation is approximately 2 GB for the control plane and 2.5 GB for
+each worker. On Windows, use PowerShell for Vagrant and host-side `kubectl`;
+use WSL/Linux for Ansible. If WSL cannot reach the VMs' private IP addresses,
+resolve that host/WSL networking issue before running Ansible.
+
+### 1. Get the code
 
 ```sh
-kubectl get nodes
+git clone https://github.com/neevgef/speedata-home-assignments.git
+cd speedata-home-assignments
 ```
 
-The remaining steps assume Helm and `kubectl` are installed and that `kubectl`
-is configured to use the target cluster.
+### 2. Create and provision the K3s cluster
 
-### 2. Adding Pull-Secret for Private Repository
+From PowerShell, start the VMs:
 
-1. Go to GitHub `Settings`, then choose `Developer Settings`. Inside choose `Personal Access Tokens` and `Tokens (classic)`. Create a token with the `read:packages` permissions and save it.
-
-2. Create pullsecret Secret:
-
-```bash
-kubectl create secret docker-registry github-registry --docker-server=ghcr.io/neevgef --docker-username=neevgef --docker-password=<step-1-token> --docker-email=neevnuv@gmail.com -n skywatch
+```powershell
+Set-Location deploy\cluster-provisioning
+vagrant up
+vagrant status
 ```
 
-3. Patch default Service Account in skywatch namespace to use this pull secret:
-
-```bash
-kubectl patch serviceaccount default -n skywatch -p '{\"imagePullSecrets\": [{\"name\": \"github-registry\"}]}'
-```
-
-### 3. Deploy with Helm (without Argo CD)
-
-From the repository root, install or upgrade the SkyWatch chart:
+From WSL/Linux, in the same repository's
+`deploy/cluster-provisioning` directory, copy Vagrant's generated SSH keys and
+install the Ansible collection used by the playbook:
 
 ```sh
-helm install skywatch ./deploy/helm --namespace skywatch --create-namespace
+mkdir -p ~/.ssh
+cp .vagrant/machines/server1/virtualbox/private_key ~/.ssh/server1_private_key
+cp .vagrant/machines/agent1/virtualbox/private_key ~/.ssh/agent1_private_key
+cp .vagrant/machines/agent2/virtualbox/private_key ~/.ssh/agent2_private_key
+chmod 600 ~/.ssh/server1_private_key ~/.ssh/agent1_private_key ~/.ssh/agent2_private_key
+ansible-galaxy collection install community.general
+ansible-playbook -i inventories/staging/hosts.yaml main.yaml
 ```
 
-Check that the application pods are ready:
+The playbook installs K3s on the control plane before joining the workers. Its
+configuration pins the K3s version and selects the private-network interface
+for Flannel. The playbook can be rerun after provisioning.
 
-```sh
-kubectl get pods,services -n skywatch
+Back in PowerShell, configure the host's kubeconfig and check the nodes:
+
+```powershell
+Set-Location deploy\cluster-provisioning
+New-Item -ItemType Directory -Force "$HOME\.kube" | Out-Null
+vagrant ssh server1 -c "sudo cat /etc/rancher/k3s/k3s.yaml" |
+    Set-Content -Encoding ascii "$HOME\.kube\config"
+$config = Get-Content "$HOME\.kube\config" -Raw
+$config.Replace("https://127.0.0.1:6443", "https://192.168.56.10:6443") |
+    Set-Content -Encoding ascii "$HOME\.kube\config"
+kubectl get nodes -o wide
 ```
 
-The frontend is available at `http://<node-ip>:30080`. For the local cluster
-created by the provisioning instructions, use `http://192.168.56.10:30080`.
+Keep the kubeconfig and Vagrant SSH keys private; do not commit them.
 
-### 4. Deploy with Argo CD
+### 3. Allow the cluster to pull the application images
 
-Use this method instead of the direct Helm deployment above. It installs Argo
-CD with Helm, then creates the Argo CD Application that tracks this repository
-and deploys the chart from `deploy/helm`.
+If the GHCR packages are private, create a GitHub Personal Access Token with
+`read:packages`. Create the app namespace, then create a registry Secret and
+attach it to that namespace's default ServiceAccount. Run in PowerShell,
+substituting your account information. Enter the token into the environment
+only for this setup; never put it in a repository file:
 
-Add the Argo Helm repository and install Argo CD:
+```powershell
+kubectl create namespace skywatch
+$env:GHCR_USERNAME = "<your-github-username>"
+$env:GHCR_TOKEN = "<PAT-with-read:packages>"
+kubectl create secret docker-registry ghcr-pull `
+    --docker-server=ghcr.io `
+    --docker-username=$env:GHCR_USERNAME `
+    --docker-password=$env:GHCR_TOKEN `
+    --docker-email="<your-email>" `
+    --namespace=skywatch
+kubectl patch serviceaccount default --namespace=skywatch `
+    --patch '{"imagePullSecrets":[{"name":"ghcr-pull"}]}'
+Remove-Item Env:GHCR_TOKEN
+```
+
+The namespace must exist before applying the Argo CD Application: the
+Application manifest targets `skywatch` and does not request automatic
+namespace creation.
+
+### 4. Install Argo CD and deploy SkyWatch
+
+From the repository root in PowerShell or another shell with Helm and
+`kubectl` configured:
 
 ```sh
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 helm upgrade --install argocd argo/argo-cd --namespace argocd --create-namespace
-```
-
-Apply the SkyWatch Argo CD Application:
-
-```sh
 kubectl apply -f deploy/argo-application.yaml
 ```
 
-The Application is configured to sync automatically, including pruning removed
-resources and correcting drift. Check its status and the deployed workloads:
+Argo CD will reconcile the `skywatch` Application from the `main` branch.
+Check the Application and workloads:
 
 ```sh
 kubectl get application skywatch -n argocd
-kubectl get pods,services -n default
+kubectl get pods,services -n skywatch
+kubectl get application skywatch -n argocd -w
 ```
 
-The frontend is available at `http://<node-ip>:30080` (or
-`http://192.168.56.10:30080` for the locally provisioned cluster).
+The frontend Service is `skywatch-frontend`, and its default Service port is
+5000. Get the reachable address from the Service's `EXTERNAL-IP`:
 
+```sh
+kubectl get service skywatch-frontend -n skywatch -o wide
+```
+
+Open `http://<EXTERNAL-IP>:5000`. K3s's ServiceLB should provide the external
+address for this local cluster. If the address remains pending, inspect the
+Service and K3s ServiceLB pods before troubleshooting connectivity.
+
+### Optional: install directly with Helm
+
+For local chart development only, this can be used instead of the Argo CD
+Application. Ensure the namespace and GHCR pull Secret are in place first:
+
+```sh
+helm upgrade --install skywatch ./deploy/helm --namespace skywatch
+```
+
+For the evaluated GitOps deployment, use Argo CD as described above rather
+than managing the same release directly with Helm.
+
+## CI/GitOps rollout and evidence
+
+The intended flow is:
+
+1. Push an application change to `main`.
+2. The corresponding GitHub Actions workflow lints the service, builds its
+   container image, and pushes a SHA-tagged image to GHCR.
+3. The workflow updates that service's image tag in
+   `deploy/helm/values.yaml`.
+4. Argo CD detects the Git change, syncs the Helm release, and waits for the
+   updated Deployment to become healthy.
+
+# **MUST ADD THIS**
+
+## Problems encountered and resolutions
+
+- **VMs have more than one network interface:** Flannel could otherwise choose
+  the NAT-facing interface, preventing reliable pod networking between VMs.
+  The K3s configuration pins Flannel to `enp0s8`, the private-network
+  interface. If the VM interface name differs, update `k3s_flannel_iface` in
+  `deploy/cluster-provisioning/group_vars/all.yaml`.
+- **Node-to-node traffic is filtered:** The playbook adds narrowly scoped UFW
+  rules for Flannel VXLAN (UDP 8472), kubelet (TCP 10250), and the Kubernetes
+  API from agents to servers (TCP 6443), limited to inventory node addresses.
+- **Private image pulls need credentials in the workload namespace:** The
+  GHCR pull Secret is created in `skywatch` and referenced by its default
+  ServiceAccount. The token is supplied at setup time, not stored in Git.
+
+## What I would improve with more time
+
+- Add automated application tests and metrics/monitoring to each application.
+- Add Multi-arch image support at build, using a architecture virualizion tool like qemu.
+- Create an AWS + Terraform installation, in addition to the Vagrant + VirtualBox installation
+- Add Prometheus Rules that will alert on high memory/cpu, high error logs and on the availability of the Open Meteo API to the backend. 
+
+## Tear down
+
+To remove the local VMs, run from `deploy/cluster-provisioning` in PowerShell:
+
+```powershell
+vagrant destroy
+```
 
 ### Credits
 
-This was written by Neev Geffen.
+Written by Neev Geffen.
