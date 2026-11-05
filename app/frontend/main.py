@@ -52,7 +52,7 @@ def get_weather(city_name):
         data = response.json()
         return data
     except requests.RequestException as error:
-        return None, f"Error fetching weather data: {error}"
+        return f"Error fetching weather data: {error}"
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -66,7 +66,7 @@ def index():
         if not city:
             error = "Please enter a city name."
         else:
-            result, error = get_weather(city)
+            error = get_weather(city)
 
     return render_template_string(PAGE, city=city, result=result, error=error)
 
