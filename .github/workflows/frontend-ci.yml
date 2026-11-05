@@ -18,6 +18,7 @@ jobs:
     with:
       context: app/frontend
   build-frontend:
+    needs: lint-frontend
     permissions:
       packages: write
       contents: read

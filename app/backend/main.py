@@ -1,12 +1,12 @@
 # Imports
+import os
 from fastapi import FastAPI
 import requests
 import uvicorn
-import os
 
 # Environment Variables
 BACKEND_HOST = os.getenv("BACKEND_HOST", '0.0.0.0')
-BACKEND_PORT = int(os.getenv("BACKEND_PORT", 8000))
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 
@@ -25,7 +25,7 @@ async def get_weather(city: str):
         "format": "json"
     }
     
-    geo_response = requests.get(geocoding_url, params=geo_params)
+    geo_response = requests.get(geocoding_url, params=geo_params, timeout=100)
     geo_response.raise_for_status()
     geo_data = geo_response.json()
     
@@ -47,7 +47,7 @@ async def get_weather(city: str):
         "timezone": "auto"            # Automatically matches the location's local time
     }
     
-    weather_response = requests.get(forecast_url, params=weather_params)
+    weather_response = requests.get(forecast_url, params=weather_params, timeout=100)
     weather_response.raise_for_status()
     weather_data = weather_response.json()
     
