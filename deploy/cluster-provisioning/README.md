@@ -1,44 +1,99 @@
-# Cluster Provisioning
+# Local K3s Cluster
 
-This guide provisions a three-node K3s cluster locally: one control-plane VM and two worker VMs.
+This directory contains a Vagrant environment and Ansible playbooks for a
+three-node K3s cluster:
 
-## Table of Contents
-[Requirements](#requirements)
-[Creating Virtual Machines](#creating-virtual-machines)
-[Starting K3s Cluster](#starting-k3s-cluster)
+| Node | Role | Private IP |
+| --- | --- | --- |
+| `server1` | Control plane | `192.168.56.10` |
+| `agent1` | Worker | `192.168.56.11` |
+| `agent2` | Worker | `192.168.56.12` |
+
+The K3s version is pinned in `group_vars/all.yaml`. The Ansible roles install
+the server first, then join both agents using the server's node token. Re-running
+the playbook with the same version and configuration does not reinstall K3s;
+configuration changes notify the corresponding service to restart.
 
 ## Requirements
-- VirtualBox
-- Vagrant
-- Ansible (if running on windows install an ansible vm)
 
+- Vagrant and VirtualBox
+- Ansible 2.14 or newer on a Linux control machine (for example, WSL)
+- SSH network access from Ansible to all three VMs on their private IPs
+- `kubectl` on your host, if you want to manage the cluster from the host
 
-## Creating Virtual Machines
+On Windows, start and manage the VMs with Vagrant in PowerShell. Run Ansible
+from WSL or another Linux environment that can reach the VMs. The private
+network must be reachable from that environment.
 
-Run these commands from *this directory*:
+## 1. Start the VMs
 
-```bash
+Run the following commands from this directory:
+
+```powershell
 vagrant up
+vagrant status
 ```
 
-Vagrant creates all three VMs. The machines are assigned static private IPs and can reach one another over the private network.
-The private ssh-keys should be saved at `.\deploy\cluster-provisioning\.vagrant\machines\<VM-NAME>\virtualbox\private_key`. Copy then, either to the Ansible VM or your local computer to `./.ssh/<VM-NAME>_private_key`.
+Vagrant creates one control-plane VM and two worker VMs. Its generated SSH keys
+are stored under `.vagrant/machines/<node>/virtualbox/private_key`.
 
+## 2. Prepare SSH keys for Ansible
 
-## Starting K3s Cluster
+Ansible connects as the `vagrant` user. Copy each generated key into the
+Ansible control machine's `~/.ssh` directory, using the filenames expected by
+the playbooks. From this directory in WSL or another Linux shell:
 
-Run these commands from this directory after the VMs have started:
+```bash
+mkdir -p ~/.ssh
+cp .vagrant/machines/server1/virtualbox/private_key ~/.ssh/server1_private_key
+cp .vagrant/machines/agent1/virtualbox/private_key ~/.ssh/agent1_private_key
+cp .vagrant/machines/agent2/virtualbox/private_key ~/.ssh/agent2_private_key
+chmod 600 ~/.ssh/server1_private_key ~/.ssh/agent1_private_key ~/.ssh/agent2_private_key
+```
+
+Keep these private keys secure; do not commit or share them.
+
+## 3. Install K3s
+
+From this directory (deploy/cluster-provisioning), run:
 
 ```bash
 ansible-playbook -i inventories/staging/hosts.yaml main.yaml
 ```
 
-The staging inventory uses Vagrant's generated SSH keys under `.vagrant/`. The playbook installs the pinned K3s release in `group_vars/all.yaml`; workers join the server at `192.168.56.10`.
+The playbook installs the control plane before the agents. The agents join
+`server1` at `192.168.56.10`. Verify the nodes from the control plane:
 
-The roles skip installation when the exact K3s version is already present. Configuration changes notify a service restart, so an unchanged, healthy cluster is left running on subsequent playbook runs.
+```powershell
+vagrant ssh server1 -c "sudo k3s kubectl get nodes -o wide"
+```
 
-To confirm the cluster is ready, run:
+Re-running the command is safe for an unchanged, healthy cluster. If you change
+the pinned version or K3s configuration, the relevant service may be
+reinstalled or restarted.
 
-```bash
-vagrant ssh control-plane -c "sudo k3s kubectl get nodes"
+## 4. Use kubectl from Windows
+
+After K3s is installed, retrieve its kubeconfig and point it at the control
+plane's private IP. Run in PowerShell from this directory:
+
+```powershell
+New-Item -ItemType Directory -Force "$HOME\.kube" | Out-Null
+vagrant ssh server1 -c "sudo cat /etc/rancher/k3s/k3s.yaml" |
+    Set-Content -Encoding ascii "$HOME\.kube\config"
+$config = Get-Content "$HOME\.kube\config" -Raw
+$config.Replace("https://127.0.0.1:6443", "https://192.168.56.10:6443") |
+    Set-Content -Encoding ascii "$HOME\.kube\config"
+kubectl get nodes -o wide
+```
+
+The kubeconfig grants access to the cluster; keep it private and do not commit
+it to Git.
+
+## Tear down
+
+To stop and remove the local VMs, run from this directory:
+
+```powershell
+vagrant destroy
 ```
