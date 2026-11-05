@@ -20,4 +20,5 @@ jobs:
       - name: Use pylint to lint the code
         run: |
           pip install pylint
+          pip install -r ${{ inputs.context }}/requirements.txt
           pylint ${{ inputs.context }} 
