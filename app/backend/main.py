@@ -2,7 +2,7 @@
 import os
 import logging
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 import requests
 import uvicorn
 
