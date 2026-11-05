@@ -29,7 +29,6 @@ PAGE = """
         <button type="submit">Submit</button>
       </form>
       {% if result %}<p role="status">{{ result }}</p>{% endif %}
-      {% if error %}<p role="alert">{{ error }}</p>{% endif %}
     </main>
   </body>
 </html>
@@ -51,6 +50,12 @@ def get_weather(city_name):
         response.raise_for_status()
         data = response.json()
         return data, None
+    except requests.HTTPError as error:
+        try:
+            message = error.response.json().get("detail")
+        except (AttributeError, ValueError):
+            message = None
+        return None, message or f"Error fetching weather data: {error}"
     except requests.RequestException as error:
         return None, f"Error fetching weather data: {error}"
 
@@ -66,9 +71,14 @@ def index():
         if not city:
             error = "Please enter a city name."
         else:
-            error = get_weather(city)
+            result, error = get_weather(city)
 
-    return render_template_string(PAGE, city=city, result=result, error=error)
+    if result:
+        return render_template_string(PAGE, city=city, result=result)
+    elif error:
+        return render_template_string(PAGE, city=city, result=error)
+    else:
+        return render_template_string(PAGE, city=city, result=None)
 
 
 @app.route("/health", methods=["GET"])

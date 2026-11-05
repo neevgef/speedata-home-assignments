@@ -1,6 +1,8 @@
 # Imports
 import os
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, HTTPException
 import requests
 import uvicorn
 
@@ -8,6 +10,7 @@ import uvicorn
 BACKEND_HOST = os.getenv("BACKEND_HOST", '0.0.0.0')
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
+logger = logging.getLogger(__name__)
 
 
 # Initialize FastAPI Application
@@ -25,13 +28,18 @@ async def get_weather(city: str):
         "format": "json"
     }
     
-    geo_response = requests.get(geocoding_url, params=geo_params, timeout=100)
-    geo_response.raise_for_status()
-    geo_data = geo_response.json()
-    
+    try:
+        geo_response = requests.get(geocoding_url, params=geo_params, timeout=100)
+        geo_response.raise_for_status()
+        geo_data = geo_response.json()
+    except requests.RequestException as error:
+        logger.exception("Geocoding API request failed when fetching coordinates for city: %s", city)
+        logger.exception("Error details: %s", error)
+        return {"error": f"Failed to fetch weather data for {city}, please try again later."}
+
     if not geo_data.get("results"):
         return {"error": f"City {city} not found."}
-    
+
     # Extract coordinates and structural details
     location = geo_data["results"][0]
     lat = location["latitude"]
@@ -43,13 +51,18 @@ async def get_weather(city: str):
     weather_params = {
         "latitude": lat,
         "longitude": lon,
-        "current": "temperature_2m",  # Requests temperature 2 meters above ground
-        "timezone": "auto"            # Automatically matches the location's local time
+        "current": "temperature_2m",
+        "timezone": "auto"
     }
-    
-    weather_response = requests.get(forecast_url, params=weather_params, timeout=100)
-    weather_response.raise_for_status()
-    weather_data = weather_response.json()
+
+    try:
+        weather_response = requests.get(forecast_url, params=weather_params, timeout=100)
+        weather_response.raise_for_status()
+        weather_data = weather_response.json()
+    except requests.RequestException as error:
+        logger.exception("Weather API forecast request failed for city: %s", city)
+        logger.exception("Error details: %s", error)
+        return {"error": f"Failed to fetch weather data for {city}, please try again later."}
     
     # Extract the temperature and corresponding unit
     current_temp = weather_data["current"]["temperature_2m"]
