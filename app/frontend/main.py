@@ -33,6 +33,7 @@ PAGE = """
 </html>
 """
 
+
 def get_weather(city_name):
     """
     Fetch weather data for the given city name from the backend service.

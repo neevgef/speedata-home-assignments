@@ -4,12 +4,12 @@ on:
     branches:
       - main
     paths:
-      - app/frontend
+      - app/frontend/**
   pull_request:
     branches:
       - main
     paths:
-      - app/frontend
+      - app/frontend/**
   workflow_dispatch:
 
 jobs:

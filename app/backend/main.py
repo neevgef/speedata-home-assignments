@@ -10,7 +10,9 @@ BACKEND_PORT = int(os.getenv("BACKEND_PORT", 8000))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info")
 
 
+# FastAPI Application
 app = FastAPI()
+
 
 @app.get("/weather", name="Get Weather")
 async def get_weather(city: str):
