@@ -10,7 +10,7 @@ PORT = int(os.environ.get("PORT", "5000"))
 # Initialize the Flask application.
 app = Flask(__name__)
 
-# HTML template for the main page rendered by the Flask app.
+# HTML template for the main page rendered by the Flask application.
 PAGE = """
 <!doctype html>
 <html lang="en">
