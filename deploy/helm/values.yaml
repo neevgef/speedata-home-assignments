@@ -21,7 +21,7 @@ backend:
   replicaCount: 2
   image:
     repository: ghcr.io/neevgef/skywatch-backend
-    tag: latest
+    tag: sha-cb503b0
     pullPolicy: IfNotPresent
   containerPort: 8000
   service:
