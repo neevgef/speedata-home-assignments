@@ -28,4 +28,30 @@
       loop: "{{ groups['k3s_cluster'] | difference([inventory_hostname]) }}"
       loop_control:
         loop_var: hostname
-      changed_when: "'Rule added' in flannel_ufw_rule.stdout"
+
+    - name: Allow kubelet API and metrics traffic between cluster nodes
+      community.general.ufw:
+        rule: allow
+        from_ip: "{{ hostvars[hostname].ansible_host }}"
+        to_ip: any
+        port: 10250
+        proto: tcp
+      loop: "{{ groups['k3s_cluster'] | difference([inventory_hostname]) }}"
+      loop_control:
+        loop_var: hostname
+
+- hosts: servers
+  become: true
+  vars:
+    ansible_ssh_private_key_file: "~/.ssh/{{inventory_hostname}}_private_key"
+  tasks:
+    - name: Allow Kubernetes API access from agent nodes
+      community.general.ufw:
+        rule: allow
+        from_ip: "{{ hostvars[hostname].ansible_host }}"
+        to_ip: any
+        port: 6443
+        proto: tcp
+      loop: "{{ groups['agents'] }}"
+      loop_control:
+        loop_var: hostname
