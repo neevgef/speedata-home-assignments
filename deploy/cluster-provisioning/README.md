@@ -14,6 +14,13 @@ the server first, then join both agents using the server's node token. Re-runnin
 the playbook with the same version and configuration does not reinstall K3s;
 configuration changes notify the corresponding service to restart.
 
+Flannel is configured to use the private-network interface `enp0s8`, so VXLAN
+traffic travels between the cluster nodes' `192.168.56.x` addresses instead of
+Vagrant's NAT interface. If your nodes use a different interface, override
+`k3s_flannel_iface` in the relevant inventory or group variables. Re-run the
+playbook after changing this setting; Ansible will restart K3s on affected
+nodes.
+
 The playbook configures UFW to allow the required K3s node traffic:
 
 - UDP `8472` between all nodes for Flannel VXLAN pod networking.

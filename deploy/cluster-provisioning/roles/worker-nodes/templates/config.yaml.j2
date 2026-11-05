@@ -1,3 +1,4 @@
 server: "https://{{ hostvars[groups['servers'][0]].ansible_host }}:6443"
 token: "{{ hostvars[groups['servers'][0]].k3s_node_token }}"
 node-ip: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+flannel-iface: "{{ k3s_flannel_iface }}"

@@ -1,1 +1,2 @@
 node-ip: "{{ ansible_host | default(ansible_default_ipv4.address) }}"
+flannel-iface: "{{ k3s_flannel_iface }}"
