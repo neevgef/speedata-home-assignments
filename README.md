@@ -190,6 +190,31 @@ kubectl get pods,services -n skywatch
 kubectl get application skywatch -n argocd -w
 ```
 
+We will be able to easily reach our ArgoCD's UI using the command `kubectl port-forward service/argocd-server -n argocd 8080:443` and going to http://localhost:8080
+
+2. Get ArgoCD admin password from secret and decode.
+
+To get encoded secret:
+
+```bash
+kubectl get secret -n argocd argocd-initial-admin-secret --template="{{.data.password}}" 
+```
+
+Decode Base64 in Linux:
+
+```bash
+kubectl get secret -n argocd argocd-initial-admin-secret --template={{.data.password}} | base64 -d <base64 secret>
+```
+
+Decode Base64 in Windows:
+
+```bash
+kubectl get secret -n argocd argocd-initial-admin-secret --template="{{.data.password}}"  > temp.b64
+certutil -decode temp.b64 argosecret.txt
+type argosecret.txt
+```
+
+
 The frontend Service is `skywatch-frontend`, and its default Service port is
 5000. Get the reachable address from the Service's `EXTERNAL-IP`:
 
