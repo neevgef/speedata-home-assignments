@@ -203,7 +203,7 @@ kubectl get secret -n argocd argocd-initial-admin-secret --template="{{.data.pas
 Decode Base64 in Linux:
 
 ```bash
-kubectl get secret -n argocd argocd-initial-admin-secret --template={{.data.password}} | base64 -d <base64 secret>
+kubectl get secret -n argocd argocd-initial-admin-secret --template={{.data.password}} | base64 -d
 ```
 
 Decode Base64 in Windows:
@@ -238,19 +238,18 @@ helm upgrade --install skywatch ./deploy/helm --namespace skywatch
 For the evaluated GitOps deployment, use Argo CD as described above rather
 than managing the same release directly with Helm.
 
-## CI/GitOps rollout and evidence
+## CI/CD and GitOps Rollout Evidence
 
-The intended flow is:
+A video demonstration of the rollout flow is provided. It shows:
 
-1. Push an application change to `main`.
-2. The corresponding GitHub Actions workflow lints the service, builds its
-   container image, and pushes a SHA-tagged image to GHCR.
-3. The workflow updates that service's image tag in
-   `deploy/helm/values.yaml`.
-4. Argo CD detects the Git change, syncs the Helm release, and waits for the
-   updated Deployment to become healthy.
+1. The application before changes
+2. The ArgoCD application before changes
+3. Changing a Header in the frontend's code
+4. The GitHub workflow triggering automatically - linting and building the frontend and afterwards updating the image tag in the Helm chart.
+5. The ArgoCD application noticing the changes to the Helm Chart and automatically syncing the application.
+6. After the Deployment deployed the new pod and terminated the old pod, we see the Header in the app changed from "Skywatch" to "Skywatch - Version 2"
 
-# **MUST ADD THIS**
+Link to Video - [Code Change CI + ArgoCD Flow](docs/videos/Code-Change-CI-ArgoCD-Flow.mp4)
 
 ## Problems encountered and resolutions
 
@@ -269,9 +268,9 @@ The intended flow is:
 ## What I would improve with more time
 
 - Add automated application tests and metrics/monitoring to each application.
-- Add Multi-arch image support at build, using a architecture virualizion tool like qemu.
+- Add Multi-arch image support at build, using an architecture virtualization tool like QEMU.
 - Create an AWS + Terraform installation, in addition to the Vagrant + VirtualBox installation
-- Add Prometheus Rules that will alert on high memory/cpu, high error logs and on the availability of the Open Meteo API to the backend. 
+- Add Prometheus rules to alert on high memory/CPU usage, high error rates, and the availability of the Open-Meteo API for the backend. 
 
 ## Tear down
 
