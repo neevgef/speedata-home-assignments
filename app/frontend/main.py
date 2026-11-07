@@ -22,7 +22,7 @@ PAGE = """
   <body>
     <main>
       <h1>SkyWatch</h1>
-      <form method="post">
+      <form method="post" autocomplete="off">
         <label for="city">Enter a city to get the current weather:</label>
         <input id="city" name="city" type="text" value="{{ city }}"
                placeholder="Enter city name" required>
