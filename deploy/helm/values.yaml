@@ -2,7 +2,7 @@ frontend:
   replicaCount: 1
   image:
     repository: ghcr.io/neevgef/skywatch-frontend
-    tag: sha-6deaaa4
+    tag: sha-f1878c4
     pullPolicy: IfNotPresent
   containerPort: 5000
   service:
